@@ -2,6 +2,6 @@ package main
 
 import "fmt"
 
-func mysqlUpdate() {
+func (c *Configs) mysqlUpdate() {
 	fmt.Println("Updating mysql")
 }

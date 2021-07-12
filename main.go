@@ -19,37 +19,48 @@ func main() {
 	err = yaml.Unmarshal(configsFileData, &configs)
 	handleErr(err, "Cannot unmarshal config file")
 	addr := fmt.Sprintf("%s:%s", configs.RemoteHost, configs.RemotePort)
-	client, err := sshclient.DialWithKey(addr, configs.RemoteUser, "/home/mda/.ssh/id_rsa2")
+	configs.SSHClient, err = sshclient.DialWithKey(addr, configs.RemoteUser, "/home/mda/.ssh/id_rsa2")
 	handleErr(err, "Cannot ssh dial")
-	defer client.Close()
-	cl := client.UnderlyingClient()
-	sftpCl, err := sftp.NewClient(cl)
+	defer configs.SSHClient.Close()
+	cl := configs.SSHClient.UnderlyingClient()
+	configs.SFTPClient, err = sftp.NewClient(cl)
 	handleErr(err, "Cannot create sftp client")
-	srcFile, err := sftpCl.Open(configs.RemoteDBConfPath)
+	srcFile, err := configs.SFTPClient.Open(configs.RemoteDBConfPath)
 	handleErr(err, "Cannot found remote_db_conf_path")
 	defer srcFile.Close()
 	dstFile, err := ioutil.TempFile("/tmp", "database.yml-")
 	handleErr(err, "Canot create %s temp file", dstFile.Name())
 	defer dstFile.Close()
 	defer os.Remove(dstFile.Name())
-	dbconfigs := make(map[string]DBConfigs, 0)
+	remoteDBConfigs := make(map[string]DBConfigs, 0)
 	_, err = io.Copy(dstFile, srcFile)
 	handleErr(err, "Cannot copy %s to %s file", srcFile.Name(), dstFile.Name())
-	dbConfigsFileData, err := ioutil.ReadFile(dstFile.Name())
+	remoteDBConfigsFileData, err := ioutil.ReadFile(dstFile.Name())
 	handleErr(err, "Cannot read %s", dstFile.Name())
-	err = yaml.Unmarshal([]byte(dbConfigsFileData), &dbconfigs)
-	handleErr(err, "Cannot unmarshal %s", dbconfigs)
-	dbParsedConfig := dbconfigs[configs.RemoteEnv]
-	err = mapstructure.Decode(dbParsedConfig, &db.DBConfigs)
+	handleErr(yaml.Unmarshal([]byte(remoteDBConfigsFileData), &remoteDBConfigs), "Cannot unmarshal %s", remoteDBConfigs)
+	remoteDBParsedConfig := remoteDBConfigs[configs.RemoteEnv]
+	err = mapstructure.Decode(remoteDBParsedConfig, &configs.RemoteDBConfigs)
 	handleErr(err, "Cannot convert map to struct")
-	fmt.Println(db.DBConfigs)
-
-	switch dbParsedConfig.Adapter {
+	fmt.Println(configs.RemoteDBConfigs)
+	localDBConfigsFileData, err := ioutil.ReadFile(configs.LocalDBConfPath)
+	handleErr(err, "Cannot open local_db_conf_path")
+	localDBConfigs := make(map[string]DBConfigs, 0)
+	handleErr(yaml.Unmarshal([]byte(localDBConfigsFileData), &localDBConfigs), "Cannot unmarshal yaml")
+	localDBParsedConfig := localDBConfigs[configs.LocalEnv]
+	handleErr(mapstructure.Decode(localDBParsedConfig, &configs.LocalDBConfigs), "Cannot unmarshal %s", localDBConfigs)
+	fmt.Println(configs.LocalDBConfigs)
+	if remoteDBParsedConfig.Adapter != localDBParsedConfig.Adapter {
+		handleErr(errors.New("Adapters mismatch"), "Remote adapter and local adapter not match")
+	}
+	switch remoteDBParsedConfig.Adapter {
 	case "postgresql":
-		handleErr(db.postgresqlUpdate(), "Failed create dump")
+		configs.postgresqlUpdate()
 	case "mysql2":
-		//db.postgresqlUpdate()
+		configs.mysqlUpdate()
 	default:
 		handleErr(errors.New("adapter error"), "Database is unrecognized")
 	}
+
+	configs.SFTPClient.Close()
+	configs.SSHClient.Close()
 }
