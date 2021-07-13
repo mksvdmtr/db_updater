@@ -68,7 +68,7 @@ func (c *Configs) mysqlUpdate() {
 		c.LocalDBConfigs.Password,
 		c.LocalDBConfigs.Database,
 		)
-	fmt.Println("Restoring dump ...")
+	log.Println("Restoring dump ...")
 	execute(cmd)
 	os.Remove(dumpTempPath)
 }
