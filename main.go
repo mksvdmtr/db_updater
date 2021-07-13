@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/helloyi/go-sshclient"
 	"github.com/mitchellh/mapstructure"
@@ -14,12 +15,18 @@ import (
 )
 
 func main() {
-	configsFileData, err := ioutil.ReadFile("config.yml")
+	homeDir, err := os.UserHomeDir()
+	configFile := flag.String("c", "config.yml", "-c /path/to/config.yml")
+	sshKeyString := fmt.Sprintf("%s/.ssh/id_rsa", homeDir)
+	privateSSHKey := flag.String("ssh-key", sshKeyString, "-ssh-key /path/to/.ssh/id_rsa")
+	flag.Parse()
+	handleErr(err, "Error getting user home dir")
+	configsFileData, err := ioutil.ReadFile(*configFile)
 	handleErr(err, "Cannot found config file")
 	err = yaml.Unmarshal(configsFileData, &configs)
 	handleErr(err, "Cannot unmarshal config file")
 	addr := fmt.Sprintf("%s:%s", configs.RemoteHost, configs.RemotePort)
-	configs.SSHClient, err = sshclient.DialWithKey(addr, configs.RemoteUser, "/home/mda/.ssh/id_rsa2")
+	configs.SSHClient, err = sshclient.DialWithKey(addr, configs.RemoteUser, *privateSSHKey)
 	handleErr(err, "Cannot ssh dial")
 	defer configs.SSHClient.Close()
 	cl := configs.SSHClient.UnderlyingClient()
@@ -41,14 +48,12 @@ func main() {
 	remoteDBParsedConfig := remoteDBConfigs[configs.RemoteEnv]
 	err = mapstructure.Decode(remoteDBParsedConfig, &configs.RemoteDBConfigs)
 	handleErr(err, "Cannot convert map to struct")
-	fmt.Println(configs.RemoteDBConfigs)
 	localDBConfigsFileData, err := ioutil.ReadFile(configs.LocalDBConfPath)
 	handleErr(err, "Cannot open local_db_conf_path")
 	localDBConfigs := make(map[string]DBConfigs, 0)
 	handleErr(yaml.Unmarshal([]byte(localDBConfigsFileData), &localDBConfigs), "Cannot unmarshal yaml")
 	localDBParsedConfig := localDBConfigs[configs.LocalEnv]
 	handleErr(mapstructure.Decode(localDBParsedConfig, &configs.LocalDBConfigs), "Cannot unmarshal %s", localDBConfigs)
-	fmt.Println(configs.LocalDBConfigs)
 	if remoteDBParsedConfig.Adapter != localDBParsedConfig.Adapter {
 		handleErr(errors.New("Adapters mismatch"), "Remote adapter and local adapter not match")
 	}
