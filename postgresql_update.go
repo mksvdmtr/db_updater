@@ -62,4 +62,5 @@ func (c Configs) postgresqlUpdate() {
 
 	log.Println("Restoring db ...")
 	execute(cmd)
+	os.Remove(dumpTempPath)
 }

@@ -69,4 +69,5 @@ func (c *Configs) mysqlUpdate() {
 		)
 	fmt.Println("Restoring dump ...")
 	execute(cmd)
+	os.Remove(dumpTempPath)
 }
