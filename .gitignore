@@ -2,3 +2,4 @@ config.yml
 docker-compose.yml
 database.yml
 db_updater
+.idea/
