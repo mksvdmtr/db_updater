@@ -32,6 +32,7 @@ func (c *Configs) mysqlUpdate() {
 	dstDump, err := os.Create(dumpTempPath)
 	handleErr(err, "Cannot create destination dump")
 	defer dstDump.Close()
+	log.Println("Fetching dump ...")
 	_, err = io.Copy(dstDump, srcDump)
 	handleErr(err, "Cannot copy source dump to destination dump")
 	handleErr(c.SFTPClient.Remove(dumpTempPath), "Cannot remove %s", dumpTempPath)
