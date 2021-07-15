@@ -16,11 +16,11 @@ import (
 
 func main() {
 	homeDir, err := os.UserHomeDir()
-	configFile := flag.String("c", "config.yml", "-c /path/to/config.yml")
+	handleErr(err, "Error getting user home dir")
+	configFile := flag.String("c", "config.yml", configUsage)
 	sshKeyString := fmt.Sprintf("%s/.ssh/id_rsa", homeDir)
 	privateSSHKey := flag.String("ssh-key", sshKeyString, "-ssh-key /path/to/.ssh/id_rsa")
 	flag.Parse()
-	handleErr(err, "Error getting user home dir")
 	configsFileData, err := ioutil.ReadFile(*configFile)
 	handleErr(err, "Cannot found config file")
 	err = yaml.Unmarshal(configsFileData, &configs)

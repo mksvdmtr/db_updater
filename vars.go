@@ -32,6 +32,22 @@ type DBConfigs struct {
 
 var (
 	configs Configs
+	configUsage = `
+-c /path/to/config.yml
+	
+available parameters:
+	
+	remote_host: "host"
+	remote_port: "22"
+	remote_user: "user"
+	remote_pg_dump_path: "/usr/bin/pg_dump"
+	remote_db_conf_path: "/data/user/app/shared/config/database.yml"
+	remote_env: "production"
+	local_env: "staging"
+	local_db_conf_path: "/home/user/app/shared/config/database.yml"
+	local_pg_restore_path: "/usr/bin/pg_restore"
+
+`
 )
 
 func init() {

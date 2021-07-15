@@ -1,4 +1,4 @@
-module rscz.ru/dmitry.m/db_updater
+module github.com/mksvdmtr/db_updater
 
 go 1.16
 
