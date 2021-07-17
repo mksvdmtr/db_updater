@@ -3,6 +3,7 @@ module github.com/mksvdmtr/db_updater
 go 1.16
 
 require (
+	github.com/cheggaaa/pb/v3 v3.0.8
 	github.com/helloyi/go-sshclient v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pkg/errors v0.9.1

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/cheggaaa/pb/v3"
 	"io"
 	"log"
 	"os"
@@ -36,7 +37,14 @@ func (c Configs) postgresqlUpdate() {
 	handleErr(err, "Cannot create destination dump")
 	defer dstDump.Close()
 	log.Println("Fetching dump ...")
-	_, err = io.Copy(dstDump, srcDump)
+	srcDumpStat, err := srcDump.Stat()
+	handleErr(err, "Error getting Stat from sorce dump file")
+	bar := pb.New64(srcDumpStat.Size())
+	bar.Set(pb.Bytes, true)
+	barReader := bar.NewProxyReader(srcDump)
+	bar.Start()
+	_, err = io.Copy(dstDump, barReader)
+	bar.Finish()
 	handleErr(err, "Cannot copy source dump to destination dump")
 	handleErr(c.SFTPClient.Remove(dumpTempPath), "Cannot remove %s", dumpTempPath)
 
