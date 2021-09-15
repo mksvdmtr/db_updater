@@ -48,16 +48,26 @@ func (c Configs) postgresqlUpdate() {
 	handleErr(err, "Cannot copy source dump to destination dump")
 	handleErr(c.SFTPClient.Remove(dumpTempPath), "Cannot remove %s", dumpTempPath)
 
-	cmd = fmt.Sprintf("PGPASSWORD=%s psql -h %s -p %s -U %s -d %s -c 'DROP SCHEMA public CASCADE; "+
-		"CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO public;'",
+	log.Println("Drop all tables ...")
+
+	cmd = fmt.Sprintf("PGPASSWORD=%s psql -h %s -p %s -U %s -d %s -c \"select 'drop table if exists \\\"' || tablename || '\\\" cascade;' from pg_tables where schemaname = 'public';\" | grep drop | tr -d '\"' > drop.sql || echo empty",
 		c.LocalDBConfigs.Password,
 		c.LocalDBConfigs.Host,
 		strconv.Itoa(c.LocalDBConfigs.Port),
 		c.LocalDBConfigs.Username,
 		c.LocalDBConfigs.Database,
 	)
-	log.Println("Drop/Create schema public ...")
 	execute(cmd)
+	cmd = fmt.Sprintf("PGPASSWORD=%s psql -h %s -p %s -U %s -d %s < drop.sql",
+		c.LocalDBConfigs.Password,
+		c.LocalDBConfigs.Host,
+		strconv.Itoa(c.LocalDBConfigs.Port),
+		c.LocalDBConfigs.Username,
+		c.LocalDBConfigs.Database,
+	)
+	execute(cmd)
+
+	os.Remove("drop.sql")
 
 	cmd = fmt.Sprintf("PGPASSWORD=%s %s -h %s -p %s -U %s -d %s -Fc -O -x %s",
 		c.LocalDBConfigs.Password,
